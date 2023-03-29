@@ -9,21 +9,6 @@
   const { Level } = await import('level')
   const fetch = (await import('node-fetch')).default
 
-  // TODO: pico-ecosystem uses sodium instead of the new cool bip-driven
-  // libs, I don't mind switching. And Buffer also seems dead.
-  /*
-  if (!globalThis.crypto) { // node <= 18 shim
-    globalThis.crypto = {
-      getRandomValues: typedArray => { // My node does not provide this method :'(
-        const b = globalThis.crypto.randomBytes(typedArray.length)
-        b.copy(typedArray)
-        return typedArray
-      },
-      ...(await import('node:crypto'))
-    }
-  }*/
-
-
   const program = new Command()
   program.description(bq`
 

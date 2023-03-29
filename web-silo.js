@@ -6,10 +6,8 @@
  * into a pure silo that runs in frontend.
  */
 import polka from 'polka'
-import sirv from 'sirv'
 import reuse from 'buffer-reuse-pool'
 import Feed from 'picofeed'
-import bparser from 'body-parser'
 import send from '@polka/send-type'
 import { unpack } from './index.js'
 import Silo from './silo.js'
@@ -21,15 +19,10 @@ export default function WebSilo (db, opts = {}) {
     ...opts
   }
   const silo = new Silo(db)
-  // TODO: this does not belong here
-  const assets = sirv(opts.static, {
-    maxAge: 31536000, // 1Y
-    immutable: true
-  })
 
   const server = polka()
-    .use(logger, assets)
-    .use(CryptoPickle(), bparser.json())
+    .use(logger)
+    .use(CryptoPickle())
     .use(Macros)
     .post('/:key', async (req, res) => {
       const feed = req.feed

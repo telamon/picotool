@@ -1,7 +1,7 @@
 {
   "name": "pico-tool",
   "version": "0.1.0",
-  "description": "A pico-web assembler and cli tool",
+  "description": "Pico web app assembler and tooling",
   "type": "module",
   "main": "index.js",
   "scripts": {
@@ -22,29 +22,19 @@
   },
   "homepage": "https://github.com/telamon/pico-tool",
   "devDependencies": {
-    "@polka/send-type": "^0.5.2",
-    "body-parser": "^1.20.2",
     "brittle": "^3.2.1",
-    "buffer-reuse-pool": "^1.0.0",
     "c8": "^7.13.0",
     "memory-level": "^1.0.0",
-    "node-fetch": "^3.3.1",
-    "picorepo": "^1.4.5",
-    "polka": "^0.5.2",
-    "sirv": "^2.0.2",
     "standard": "^17.0.0"
   },
   "dependencies": {
-    "@noble/secp256k1": "^2.0.0",
+    "@polka/send-type": "^0.5.2",
+    "buffer-reuse-pool": "^1.0.0",
     "commander": "^10.0.0",
     "level": "^8.0.0",
-    "nostr-tools": "^1.8.1",
-    "picofeed": "^3.4.2"
-  },
-  "peerDependencies": {
-    "buffer-reuse-pool": "^1.0.0",
+    "node-fetch": "^3.3.1",
+    "picofeed": "^3.4.2",
     "picorepo": "^1.4.5",
-    "polka": "^0.5.2",
-    "sirv": "^2.0.2"
+    "polka": "^0.5.2"
   }
 }
