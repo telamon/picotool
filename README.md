@@ -4,7 +4,7 @@
 
 > A pico web app signer and silo
 
-This tool to build a and host
+This is a tool to build and host
 decentralized single file progressive web applications
 whose maximum allowed filesize is `64K`.
 
