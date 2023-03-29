@@ -11,22 +11,13 @@
 
   const program = new Command()
   program.description(bq`
-
-    General purpose tool for interacting with pico web app.
-     ,_ __  _  ___ ___
-    | '_ \\| |/ __/ _ \\
-    | |_) | | (_| (_) | WEB
-    | .__/|_|\\___\\___/
-    | |
-
+    General purpose tool for interacting with pico web apps.
   `)
 
-  program.command('release')
-    .description(bq`
-      Sign HTML and publish as PWA
-    `)
+  program.command('pub')
+    .description('Sign HTML and publish as PWA')
     .option('-s, --secret <nsec>', 'Your signing secret using POP-1 format')
-    .option('-o, --output <url>', 'File or silo URL, default STDOUT')
+    .option('-o, --output <url|file|qr>', 'Destination File, Silo, default: STDOUT')
     .argument('<HTML file>', 'File path to html, use "-" for STDIN')
     .action(runRelease)
 
@@ -52,9 +43,9 @@
     let sk
     if (sk) sk = Buffer.from(options.secret, 'hex')
     else {
-      console.error('No secret provided, generating, keep it safe')
+      console.error('No secret provided, generated new, keep it safe: \n')
       sk = Feed.signPair().sk
-      console.error(sk.hexSlice())
+      console.error(sk.hexSlice(), '\n')
     }
     // TODO: move to picofeed: const privKey = secp.utils.randomPrivateKey() // Secure random private key
 
