@@ -7,6 +7,7 @@
   "bin": {
     "picotool": "cli.js"
   },
+  "files": ["index.js", "silo.js", "web-silo.js", "index.esm.js"]
   "scripts": {
     "lint": "standard",
     "test": "brittle test.js",
@@ -16,14 +17,14 @@
   },
   "repository": {
     "type": "git",
-    "url": "git://https://github.com/telamon/pico-tool"
+    "url": "https://github.com/telamon/picotool"
   },
   "author": "Tony Ivanov",
   "license": "AGPL-3.0-or-later",
   "bugs": {
-    "url": "https://github.com/telamon/pico-tool"
+    "url": "https://github.com/telamon/picotool"
   },
-  "homepage": "https://github.com/telamon/pico-tool",
+  "homepage": "https://github.com/telamon/picotool",
   "keywords": [
     "pico",
     "decentralized",
