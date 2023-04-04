@@ -14,7 +14,7 @@ Create an cool `index.html`
 Then run:
 
 ```bash
-$ npx picotool pub index.html -o https://pyra.se
+$ npx picotool pub index.html -o https://pyra.se/silo
 ```
 
 Or host your own silo:
