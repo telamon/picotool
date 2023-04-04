@@ -10,4 +10,5 @@
 !silo.js
 !web-silo.js
 !cli.js
-
+!build.js
+index.esm.js

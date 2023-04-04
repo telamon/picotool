@@ -4,13 +4,15 @@
   "description": "Pico web app assembler and tooling",
   "type": "module",
   "main": "index.js",
-  "bin": { "picotool": "cli.js" },
+  "bin": {
+    "picotool": "cli.js"
+  },
   "scripts": {
     "lint": "standard",
     "test": "brittle test.js",
     "cov": "c8 npm test",
     "debug": "node inspect $(npm bin)/brittle test.js",
-    "prepublishOnly": "standard && npm test"
+    "prepublishOnly": "standard && npm test && node build.js"
   },
   "repository": {
     "type": "git",
@@ -32,7 +34,9 @@
   "devDependencies": {
     "brittle": "^3.2.1",
     "c8": "^7.13.0",
+    "esbuild": "^0.17.15",
     "memory-level": "^1.0.0",
+    "node-stdlib-browser": "^1.2.0",
     "standard": "^17.0.0"
   },
   "dependencies": {

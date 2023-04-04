@@ -39,7 +39,6 @@
   program.parse()
 
   async function runRelease (input, options) {
-    console.log(input, options)
     let sk
     if (sk) sk = Buffer.from(options.secret, 'hex')
     else {
