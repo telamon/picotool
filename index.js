@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import Feed from 'picofeed'
+import PicoFeed from 'picofeed'
+export const Feed = PicoFeed
 
 export function pack (secret, body, headers = {}, runlvl = 0, feed = new Feed()) {
   let hdata = ''
