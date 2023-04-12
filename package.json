@@ -14,7 +14,7 @@
     "index.esm.js"
   ],
   "scripts": {
-    "lint": "standard",
+    "lint": "standard --fix",
     "test": "brittle test/*.js",
     "cov": "c8 npm test",
     "debug": "node inspect $(npm bin)/brittle test/*.js",

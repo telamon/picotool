@@ -54,7 +54,7 @@ test('Silo', async t => {
   // TODO
 })
 
-test.skip('Silo track hits', async t => {
+test('Silo track hits', async t => {
   const db = new MemoryLevel()
   const silo = new Silo(db)
   const { pk, sk } = Feed.signPair()
@@ -62,7 +62,6 @@ test.skip('Silo track hits', async t => {
   t.is(stored, true)
 
   // fetch stats for a site
-  // TODO: implement silo.stat(pk) => { hits: Number }
   let stat = await silo.stat(pk)
   t.is(stat.hits, 0)
 
