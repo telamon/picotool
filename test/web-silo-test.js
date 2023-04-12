@@ -1,13 +1,17 @@
-import test from 'brittle'
+import { test } from 'brittle'
 import Feed from 'picofeed'
-import {
-  pack,
-  unpack
-} from './index.js'
-import WebSilo from './web-silo.js'
-import Silo from './silo.js'
+import { pack, unpack } from '../index.js'
+import WebSilo from '../web-silo.js'
 import fetch from 'node-fetch'
 import { MemoryLevel } from 'memory-level'
+
+async function listen () {
+  const db = new MemoryLevel()
+  await db.open()
+  const silo = WebSilo(db)
+  await new Promise(resolve => silo.listen(1337, resolve))
+  return ['http://localhost:1337', () => silo.server.close()]
+}
 
 const HTML = `<!doctype html>
 <html>
@@ -20,17 +24,6 @@ const HTML = `<!doctype html>
 </html>
 `
 
-test('POP-04 pack/unpack', async t => {
-  const { sk } = Feed.signPair() // TODO: change algo
-  const p = pack(sk, HTML)
-  t.ok(Feed.isFeed(p))
-  const out = unpack(p)
-  // console.log(out)
-  t.is(out.body, HTML)
-  t.ok(out.headers.date)
-  t.is(out.runlevel, 0)
-})
-
 test('WebSilo push', async t => {
   const [url, close] = await listen()
   const { pk, sk } = Feed.signPair()
@@ -41,6 +34,7 @@ test('WebSilo push', async t => {
     body: site.buf.slice(0, site.tail)
   })
   t.is(res.status, 201)
+
   const visit = await fetch(url + '/' + pk.hexSlice(), {
     method: 'GET',
     headers: { Accept: 'text/html' }
@@ -51,23 +45,23 @@ test('WebSilo push', async t => {
   close()
 })
 
-test.skip('WebSilo update', async t => {
+test('WebSilo update', async t => {
   const [url, close] = await listen()
   const { pk, sk } = Feed.signPair()
-  const site = pack(sk, HTML)
+  const site1 = pack(sk, HTML)
   let res = await fetch(url + '/' + pk.hexSlice(), {
     method: 'POST',
     headers: { 'Content-Type': 'pico/feed' },
-    body: site.buf.slice(0, site.tail)
+    body: site1.buf.slice(0, site1.tail)
   })
   t.is(res.status, 201)
 
   const HTML2 = HTML + '<footer>gray-sock</footer>'
-  const update = pack(sk, HTML2)
+  const site2 = pack(sk, HTML2)
   res = await fetch(url + '/' + pk.hexSlice(), {
     method: 'POST',
     headers: { 'Content-Type': 'pico/feed' },
-    body: update.buf.slice(0, update.tail)
+    body: site2.buf.slice(0, site2.tail)
   })
   t.is(res.status, 201)
 
@@ -76,7 +70,7 @@ test.skip('WebSilo update', async t => {
     headers: { Accept: 'text/html' }
   })
 
-  const original = unpack(site)
+  const original = unpack(site2)
   const doc = await visit.text()
   t.is(doc, original.body)
   close()
@@ -103,49 +97,4 @@ test('web-silo index', async t => {
   t.is(entry.title, 'PicoWEB title')
   t.is(entry.size, 142)
   close()
-})
-
-async function listen () {
-  const db = new MemoryLevel()
-  const silo = WebSilo(db)
-  await new Promise(resolve => silo.listen(1337, resolve))
-  return ['http://localhost:1337', () => silo.server.close()]
-}
-
-test('Silo', async t => {
-  const db = new MemoryLevel()
-  const silo = new Silo(db)
-  // put
-  const { pk, sk } = Feed.signPair()
-  const stored = await silo.put(pack(sk, HTML))
-  t.is(stored, true)
-  // get
-  const feed = await silo.get(pk)
-  t.ok(feed)
-
-  // list
-  const list = await silo.list() // TBD
-  t.is(list.length, 1)
-  // delete
-  // TODO
-})
-
-test.skip('Silo track hits', async t => {
-  const db = new MemoryLevel()
-  const silo = new Silo(db)
-  const { pk, sk } = Feed.signPair()
-  const stored = await silo.put(pack(sk, HTML))
-  t.is(stored, true)
-
-  // fetch stats for a site
-  // TODO: implement silo.stat(pk) => { hits: Number }
-  let stat = await silo.stat(pk)
-  t.is(stat.hits, 0)
-
-  // get
-  const feed = await silo.get(pk)
-  t.ok(feed)
-
-  stat = await silo.stat(pk)
-  t.is(stat.hits, 1)
 })

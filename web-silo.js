@@ -6,7 +6,7 @@
  * into a pure silo that runs in frontend.
  */
 import polka from 'polka'
-import reuse from 'buffer-reuse-pool'
+// import reuse from 'buffer-reuse-pool' // This caused global spooky action
 import Feed from 'picofeed'
 import send from '@polka/send-type'
 import { unpack } from './index.js'
@@ -31,8 +31,9 @@ export default function WebSilo (db, opts = {}) {
     const key = Buffer.from(req.params.key, 'hex')
     if (!feed.last.key.equals(key)) return res.error('Verification failed', 401)
     try {
-      await silo.put(feed)
-      send(res, 201, { done: true })
+      const stored = await silo.put(feed)
+      if (stored) send(res, 201, { done: true })
+      else send(res, 304, { error: 'not-modified' })
     } catch (err) {
       console.error('Failed unpack()', err)
       return res.error(err.message, 400)
@@ -89,19 +90,15 @@ function logger (req, res, next) {
 
 // Picofeed Middleware
 function CryptoPickle () {
-  const pool = reuse.pool(Feed.MAX_FEED_SIZE)
   return function (req, res, next) {
     const type = req.headers['content-type']
     if (type !== 'pico/feed') return next()
-
     const size = parseInt(req.headers['content-length'])
 
-    const buffer = pool.alloc()
-    let released = 0
-    const release = () => !released && (reuse.free(buffer), ++released)
-    res.once('close', release)
-
+    const buffer = Buffer.alloc(Math.min(size, Feed.MAX_FEED_SIZE)) // pool.alloc()
+    buffer.fill(0)
     let offset = 0
+
     new Promise((resolve, reject) => {
       req.on('data', chunk => {
         try {
@@ -120,8 +117,6 @@ function CryptoPickle () {
       req.feed._reIndex(true)
       next()
     }).catch(err => {
-      console.info('Pool free() via err', pool.free.length)
-      release()
       next(err)
     })
   }

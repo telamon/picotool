@@ -15,9 +15,9 @@
   ],
   "scripts": {
     "lint": "standard",
-    "test": "brittle test.js",
+    "test": "brittle test/*.js",
     "cov": "c8 npm test",
-    "debug": "node inspect $(npm bin)/brittle test.js",
+    "debug": "node inspect $(npm bin)/brittle test/*.js",
     "prepublishOnly": "standard && npm test && node build.js"
   },
   "repository": {
@@ -52,7 +52,7 @@
     "level": "^8.0.0",
     "node-fetch": "^3.3.1",
     "picofeed": "^3.4.2",
-    "picorepo": "^1.4.5",
+    "picorepo": "^1.4.6",
     "polka": "^0.5.2"
   }
 }

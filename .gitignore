@@ -4,7 +4,8 @@
 !LICENSE
 !package.json
 !index.js
-!test.js
+!test/unit-test.js
+!test/web-silo-test.js
 !.editorconfig
 !.gitignore
 !silo.js
