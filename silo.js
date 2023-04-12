@@ -16,6 +16,7 @@ export default class Silo {
       valueEncoding: 'buffer',
       keyEncoding: 'buffer'
     }))
+    this.hits = db.sublevel('hits', { keyEncoding: 'buffer', valueEncoding: 'json' })
   }
 
   async put (feed) {
@@ -43,7 +44,14 @@ export default class Silo {
     return true
   }
 
+  async stat (key) {
+    const hits = await this.hits.get(key).catch(ignore404)
+    return { hits: hits || 0 }
+  }
+
   async get (key) {
+    const counter = await this.hits.get(key).catch(ignore404)
+    await this.hits.put(key, (counter || 0) + 1)
     return this.repo.loadHead(key)
   }
 

@@ -1,9 +1,6 @@
 import test from 'brittle'
 import Feed from 'picofeed'
-import {
-  pack,
-  unpack
-} from './index.js'
+import { pack, unpack } from './index.js'
 import WebSilo from './web-silo.js'
 import Silo from './silo.js'
 import fetch from 'node-fetch'
@@ -108,7 +105,7 @@ test('web-silo index', async t => {
 async function listen () {
   const db = new MemoryLevel()
   const silo = WebSilo(db)
-  await new Promise(resolve => silo.listen(1337, resolve))
+  await new Promise((resolve) => silo.listen(1337, resolve))
   return ['http://localhost:1337', () => silo.server.close()]
 }
 
@@ -130,7 +127,7 @@ test('Silo', async t => {
   // TODO
 })
 
-test.skip('Silo track hits', async t => {
+test('Silo track hits', async t => {
   const db = new MemoryLevel()
   const silo = new Silo(db)
   const { pk, sk } = Feed.signPair()
