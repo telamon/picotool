@@ -98,3 +98,23 @@ test('web-silo index', async t => {
   t.is(entry.size, 142)
   close()
 })
+
+test('web-silo stat', async t => {
+  const [url, close] = await listen()
+  const { pk, sk } = Feed.signPair()
+  const site = pack(sk, HTML)
+  await fetch(url + '/' + pk.hexSlice(), {
+    method: 'POST',
+    headers: { 'Content-Type': 'pico/feed' },
+    body: site.buf.slice(0, site.tail)
+  })
+  const res = await fetch(url + '/stat/' + pk.hexSlice(), {
+    method: 'GET'
+  })
+  t.is(res.status, 200)
+  const stat = await res.json()
+  t.is(stat.hits, 0)
+  t.is(stat.runlevel, 0)
+  t.is(stat.title, 'PicoWEB title')
+  close()
+})

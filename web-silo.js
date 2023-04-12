@@ -40,12 +40,12 @@ export default function WebSilo (db, opts = {}) {
     }
   })
 
-  /**
-   * TODO: Fetch stats for given site;
-   * - headers
-   * - hits - 92423
-   */
-  api.get('/head/:key', async (req, res) => { })
+  api.get('/stat/:key', async (req, res) => {
+    const key = Buffer.from(req.params.key, 'hex')
+    const stat = await silo.stat(key)
+    if (!stat) send(res, 404)
+    else send(res, 200, stat)
+  })
 
   /**
    * TODO: unpublish site.

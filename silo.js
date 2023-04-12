@@ -55,12 +55,15 @@ export default class Silo {
       runlevel: 0,
       size: feed.last.size
     })
+    await this.idxDate.put(site.date, key)
     return true
   }
 
   async stat (key) {
-    const hits = await this.hits.get(key).catch(ignore404)
-    return { hits: hits || 0 }
+    const meta = await this.idxMeta.get(key).catch(ignore404)
+    if (!meta) return
+    const hits = (await this.hits.get(key).catch(ignore404)) || 0
+    return { ...meta, hits }
   }
 
   async get (key) {
@@ -73,10 +76,10 @@ export default class Silo {
     const heads = await this.repo.listHeads()
     const out = []
     for (const head of heads) {
-      const metadata = await this.idxMeta.get(head.key)
+      const stat = await this.stat(head.key)
       out.push({
         key: head.key.hexSlice(),
-        ...metadata,
+        ...stat,
         signature: head.value.hexSlice()
       })
     }
