@@ -17,7 +17,7 @@ const HTML = `<!doctype html>
 </html>
 `
 
-test('POP-04 pack/unpack', async (t) => {
+test('POP-04 pack/unpack', async t => {
   const { sk } = Feed.signPair() // TODO: change algo
   const p = pack(sk, HTML)
   t.ok(Feed.isFeed(p))
@@ -28,7 +28,7 @@ test('POP-04 pack/unpack', async (t) => {
   t.is(out.runlevel, 0)
 })
 
-test('WebSilo push', async (t) => {
+test('WebSilo push', async t => {
   const [url, close] = await listen()
   const { pk, sk } = Feed.signPair()
   const site = pack(sk, HTML)
@@ -48,7 +48,7 @@ test('WebSilo push', async (t) => {
   close()
 })
 
-test.skip('WebSilo update', async (t) => {
+test.skip('WebSilo update', async t => {
   const [url, close] = await listen()
   const { pk, sk } = Feed.signPair()
   const site = pack(sk, HTML)
@@ -79,7 +79,7 @@ test.skip('WebSilo update', async (t) => {
   close()
 })
 
-test('web-silo index', async (t) => {
+test('web-silo index', async t => {
   const [url, close] = await listen()
   const { pk, sk } = Feed.signPair()
   const site = pack(sk, HTML)
@@ -109,7 +109,7 @@ async function listen () {
   return ['http://localhost:1337', () => silo.server.close()]
 }
 
-test('Silo', async (t) => {
+test('Silo', async t => {
   const db = new MemoryLevel()
   const silo = new Silo(db)
   // put
@@ -127,7 +127,7 @@ test('Silo', async (t) => {
   // TODO
 })
 
-test('Silo track hits', async (t) => {
+test('Silo track hits', async t => {
   const db = new MemoryLevel()
   const silo = new Silo(db)
   const { pk, sk } = Feed.signPair()
