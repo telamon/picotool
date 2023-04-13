@@ -70,6 +70,5 @@ export async function fetchHttp (siloUrl) {
   feed.buf = Buffer.from(await res.arrayBuffer())
   feed.tail = feed.buf.length
   feed._reIndex(true)
-  debugger
   return feed
 }
