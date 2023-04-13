@@ -60,7 +60,7 @@ export default function WebSilo (db, opts = {}) {
     if (!feed) return res.error('Site not Found', 404)
     switch (req.headers.accept) {
       case 'pico/feed':
-        send(res, 200, feed.buf, { 'Content-Type': 'pico/feed' })
+        send(res, 200, feed.buf.slice(0, feed.tail), { 'Content-Type': 'pico/feed' })
         break
 
       case 'text/html':
@@ -92,7 +92,7 @@ function logger (req, res, next) {
 function CryptoPickle () {
   return function (req, res, next) {
     const type = req.headers['content-type']
-    if (type !== 'pico/feed') return next()
+    if (type !== 'pico/feed' || !~['POST', 'PUT'].indexOf(req.method)) return next()
     const size = parseInt(req.headers['content-length'])
 
     const buffer = Buffer.alloc(Math.min(size, Feed.MAX_FEED_SIZE)) // pool.alloc()

@@ -46,3 +46,30 @@ export function unpack (block) {
   }
   //  block.body
 }
+
+export async function pushHttp (siloUrl, site) {
+  site = PicoFeed.from(site)
+  return globalThis.fetch(siloUrl, {
+    method: 'POST',
+    headers: { 'Content-Type': 'pico/feed' },
+    body: site.buf.slice(0, site.tail)
+  })
+}
+
+export async function fetchHttp (siloUrl) {
+  const res = await globalThis.fetch(siloUrl, {
+    method: 'GET',
+    headers: { accept: 'pico/feed' }
+  })
+  if (res.status !== 200) return res
+  const ctype = res.headers.get('Content-Type')
+  if (ctype !== 'pico/feed') throw new Error('Expected pico/feed, received ' + ctype)
+  // TODO: For PicoFeed 4.x redesign API so that this should never happen.
+  // also most likely just write the whole thing in wasm/zig. Cause this is not nice.
+  const feed = new Feed()
+  feed.buf = Buffer.from(await res.arrayBuffer())
+  feed.tail = feed.buf.length
+  feed._reIndex(true)
+  debugger
+  return feed
+}

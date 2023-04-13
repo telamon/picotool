@@ -1,9 +1,11 @@
-import { test } from 'brittle'
+import { test, solo } from 'brittle'
 import Feed from 'picofeed'
-import { pack, unpack } from '../index.js'
+import { pack, unpack, pushHttp, fetchHttp } from '../index.js'
 import WebSilo from '../web-silo.js'
 import fetch from 'node-fetch'
 import { MemoryLevel } from 'memory-level'
+
+globalThis.fetch = fetch // shim fetch
 
 async function listen () {
   const db = new MemoryLevel()
@@ -24,17 +26,13 @@ const HTML = `<!doctype html>
 </html>
 `
 
-test('WebSilo push', async t => {
+solo('WebSilo push', async t => {
   const [url, close] = await listen()
   const { pk, sk } = Feed.signPair()
   const site = pack(sk, HTML)
-  const res = await fetch(url + '/' + pk.hexSlice(), {
-    method: 'POST',
-    headers: { 'Content-Type': 'pico/feed' },
-    body: site.buf.slice(0, site.tail)
-  })
+  const res = await pushHttp(url + '/' + pk.hexSlice(), site)
   t.is(res.status, 201)
-
+  // Test fetch as text/html (unrestricted mode)
   const visit = await fetch(url + '/' + pk.hexSlice(), {
     method: 'GET',
     headers: { Accept: 'text/html' }
@@ -42,6 +40,10 @@ test('WebSilo push', async t => {
   const original = unpack(site)
   const doc = await visit.text()
   t.is(doc, original.body)
+
+  // Test fetch as pico/feed (for sandboxed bootloading)
+  const feed = await fetchHttp(url + '/' + pk.hexSlice())
+  t.is(Feed.isFeed(feed), true)
   close()
 })
 
@@ -49,20 +51,12 @@ test('WebSilo update', async t => {
   const [url, close] = await listen()
   const { pk, sk } = Feed.signPair()
   const site1 = pack(sk, HTML)
-  let res = await fetch(url + '/' + pk.hexSlice(), {
-    method: 'POST',
-    headers: { 'Content-Type': 'pico/feed' },
-    body: site1.buf.slice(0, site1.tail)
-  })
+  let res = await pushHttp(url + '/' + pk.hexSlice(), site1)
   t.is(res.status, 201)
 
   const HTML2 = HTML + '<footer>gray-sock</footer>'
   const site2 = pack(sk, HTML2)
-  res = await fetch(url + '/' + pk.hexSlice(), {
-    method: 'POST',
-    headers: { 'Content-Type': 'pico/feed' },
-    body: site2.buf.slice(0, site2.tail)
-  })
+  res = await pushHttp(url + '/' + pk.hexSlice(), site2)
   t.is(res.status, 201)
 
   const visit = await fetch(url + '/' + pk.hexSlice(), {
@@ -80,11 +74,7 @@ test('web-silo index', async t => {
   const [url, close] = await listen()
   const { pk, sk } = Feed.signPair()
   const site = pack(sk, HTML)
-  await fetch(url + '/' + pk.hexSlice(), {
-    method: 'POST',
-    headers: { 'Content-Type': 'pico/feed' },
-    body: site.buf.slice(0, site.tail)
-  })
+  await pushHttp(url + '/' + pk.hexSlice(), site)
 
   const res = await fetch(url, {
     method: 'GET'
@@ -103,11 +93,7 @@ test('web-silo stat', async t => {
   const [url, close] = await listen()
   const { pk, sk } = Feed.signPair()
   const site = pack(sk, HTML)
-  await fetch(url + '/' + pk.hexSlice(), {
-    method: 'POST',
-    headers: { 'Content-Type': 'pico/feed' },
-    body: site.buf.slice(0, site.tail)
-  })
+  await pushHttp(url + '/' + pk.hexSlice(), site)
   const res = await fetch(url + '/stat/' + pk.hexSlice(), {
     method: 'GET'
   })
