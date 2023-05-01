@@ -1,5 +1,5 @@
-import test from 'brittle'
-import { Feed } from 'picofeed'
+import { solo, test } from 'brittle'
+import { Feed, isFeed, feedFrom, b2s } from 'picofeed'
 import {
   pack,
   unpack
@@ -8,8 +8,10 @@ import WebSilo from './web-silo.js'
 import Silo from './silo.js'
 import fetch from 'node-fetch'
 import { MemoryLevel } from 'memory-level'
+import { readFileSync, writeFileSync } from 'node:fs'
 import { webcrypto } from 'node:crypto'
 if (!globalThis.crypto) globalThis.crypto = webcrypto
+
 const HTML = `<!doctype html>
 <html>
 <head>
@@ -98,4 +100,14 @@ test('Silo', async t => {
   t.is(list.length, 1)
   // delete
   // TODO
+})
+
+solo('POP-04: file.html => file.pwa', async t => {
+  const source = readFileSync('./example.html')
+  const pwa = pack(source)
+  // writeFileSync('./example.pwa', pwa.buffer)
+  t.ok(isFeed(pwa))
+  const site = unpack(pwa)
+  console.log(site)
+  t.is(site.body)
 })
