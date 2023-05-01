@@ -1,14 +1,5 @@
-# Reverse policy .gitignore
-*
-!README.md
-!LICENSE
-!package.json
-!index.js
-!test.js
-!.editorconfig
-!.gitignore
-!silo.js
-!web-silo.js
-!cli.js
-!build.js
-!example.html
+node_modules/
+index.esm.js
+package-lock.json
+yarn.lock
+silo.lvl/

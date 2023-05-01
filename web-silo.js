@@ -6,7 +6,7 @@
  * into a pure silo that runs in frontend.
  */
 import polka from 'polka'
-import { Feed, cmp, u8n } from 'picofeed'
+import { Feed, cmp, u8n, h2b } from 'picofeed'
 import send from '@polka/send-type'
 import { unpack } from './index.js'
 import Silo from './silo.js'
@@ -19,47 +19,65 @@ export default function WebSilo (db, opts = {}) {
   }
   const silo = new Silo(db)
 
-  const server = polka()
+  const api = polka()
     .use(logger)
     .use(CryptoPickle())
     .use(Macros)
-    .post('/:key', async (req, res) => {
-      const feed = req.feed
-      const key = Buffer.from(req.params.key, 'hex')
-      if (!cmp(feed.last.key, key)) return res.error('Verification failed', 401)
-      try {
-        await silo.put(feed)
-        send(res, 201, { done: true })
-      } catch (err) {
-        console.error('Failed unpack()', err)
-        return res.error(err.message, 400)
-      }
-    })
-    .get('/:key', async (req, res) => {
-      const key = Buffer.from(req.params.key, 'hex')
-      const feed = await silo.get(key)
-      if (!feed) return res.error('Site not Found', 404)
-      switch (req.headers.accept) {
-        case 'pico/feed':
-          send(res, 200, feed.buffer, { 'Content-Type': 'pico/feed' })
-          break
 
-        case 'text/html':
-        default: {
-          // Server side bootloading, very boring;
-          const site = unpack(feed)
-          send(res, 200, site.body, {
-            ...site.headers,
-            'Content-Type': 'text/html'
-          })
-        }
+  // Publish site endpoint
+  api.post('/:key', async (req, res) => {
+    const feed = req.feed
+    const key = Buffer.from(req.params.key, 'hex')
+    if (!cmp(feed.last.key, key)) return res.error('Verification failed', 401)
+    try {
+      await silo.put(feed)
+      send(res, 201, { done: true })
+    } catch (err) {
+      console.error('Failed unpack()', err)
+      return res.error(err.message, 400)
+    }
+  })
+
+  api.get('/stat/:key', async (req, res) => {
+    const key = Buffer.from(req.params.key, 'hex')
+    const stat = await silo.stat(key)
+    if (!stat) send(res, 404)
+    else send(res, 200, stat)
+  })
+
+  /**
+   * TODO: unpublish site.
+   * TBD;
+   */
+  // api.delete('/:key', async (req, res) => { }
+
+  // Fetch site Endpoint
+  api.get('/:key', async (req, res) => {
+    const key = h2b(req.params.key)
+    const feed = await silo.get(key)
+    if (!feed) return res.error('Site not Found', 404)
+    switch (req.headers.accept) {
+      case 'pico/feed':
+        send(res, 200, feed.buffer, { 'Content-Type': 'pico/feed' })
+        break
+
+      case 'text/html':
+      default: {
+        // Server side bootloading, very boring;
+        const site = unpack(feed)
+        send(res, 200, site.body, {
+          ...site.headers,
+          'Content-Type': 'text/html'
+        })
       }
-    })
-    .get('/', async (_, res) => {
-      const out = await silo.list()
-      send(res, 200, out)
-    })
-  return server
+    }
+  })
+
+  api.get('/', async (req, res) => {
+    const out = await silo.list()
+    send(res, 200, out)
+  })
+  return api
 }
 
 // Log every request
@@ -72,12 +90,12 @@ function logger (req, _, next) {
 function CryptoPickle () {
   return function (req, _, next) {
     const type = req.headers['content-type']
-    if (type !== 'pico/feed') return next()
-
+    if (type !== 'pico/feed' || !~['POST', 'PUT'].indexOf(req.method)) return next()
     const size = parseInt(req.headers['content-length'])
 
     const buffer = u8n(Math.min(65536, size))
     let offset = 0
+
     new Promise((resolve, reject) => {
       req.on('data', chunk => {
         try {
