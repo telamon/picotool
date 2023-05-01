@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import PicoFeed from 'picofeed'
-export const Feed = PicoFeed
-
+import { Feed, b2s } from 'picofeed'
+import { b64e, b64d, byteLength } from './b64.js'
+/** @returns {Feed} */
 export function pack (secret, body, headers = {}, runlvl = 0, feed = new Feed()) {
   let hdata = ''
   headers.date = Date.now()
@@ -15,9 +15,9 @@ export function pack (secret, body, headers = {}, runlvl = 0, feed = new Feed())
 }
 
 export function unpack (block) {
-  if (Feed.isFeed(block)) return unpack(block.last)
-  if (!block[Feed.BLOCK_SYMBOL]) throw new Error('Not a block')
-  const str = block.body.toString('utf8')
+  if (Feed.isFeed(block)) block = block.last
+  if (!Feed.isBlock(block)) throw new Error('Not a block')
+  const str = b2s(block.body)
   let o = str.indexOf('\n')
   const type = str.slice(0, o)
   if (type !== 'html0') throw new Error('Unsupported type')
@@ -45,4 +45,15 @@ export function unpack (block) {
     body: str.slice(++o)
   }
   //  block.body
+}
+
+/** @type {(feed: Feed) => string} */
+export function pickle (feed) {
+  return b64e(feed.buffer)
+}
+/** @type {(str: string) => Feed} */
+export function unpickle (str) {
+  const b = new Uint8Array(byteLength(str))
+  b64d(b, str)
+  return new Feed(b)
 }

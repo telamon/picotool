@@ -6,8 +6,7 @@
  * into a pure silo that runs in frontend.
  */
 import polka from 'polka'
-import reuse from 'buffer-reuse-pool'
-import Feed from 'picofeed'
+import { Feed, cmp, u8n } from 'picofeed'
 import send from '@polka/send-type'
 import { unpack } from './index.js'
 import Silo from './silo.js'
@@ -27,7 +26,7 @@ export default function WebSilo (db, opts = {}) {
     .post('/:key', async (req, res) => {
       const feed = req.feed
       const key = Buffer.from(req.params.key, 'hex')
-      if (!feed.last.key.equals(key)) return res.error('Verification failed', 401)
+      if (!cmp(feed.last.key, key)) return res.error('Verification failed', 401)
       try {
         await silo.put(feed)
         send(res, 201, { done: true })
@@ -42,7 +41,7 @@ export default function WebSilo (db, opts = {}) {
       if (!feed) return res.error('Site not Found', 404)
       switch (req.headers.accept) {
         case 'pico/feed':
-          send(res, 200, feed.buf, { 'Content-Type': 'pico/feed' })
+          send(res, 200, feed.buffer, { 'Content-Type': 'pico/feed' })
           break
 
         case 'text/html':
@@ -56,7 +55,7 @@ export default function WebSilo (db, opts = {}) {
         }
       }
     })
-    .get('/', async (req, res) => {
+    .get('/', async (_, res) => {
       const out = await silo.list()
       send(res, 200, out)
     })
@@ -64,25 +63,20 @@ export default function WebSilo (db, opts = {}) {
 }
 
 // Log every request
-function logger (req, res, next) {
+function logger (req, _, next) {
   console.log(`${req.method} ${req.url}`)
   next()
 }
 
 // Picofeed Middleware
 function CryptoPickle () {
-  const pool = reuse.pool(Feed.MAX_FEED_SIZE)
-  return function (req, res, next) {
+  return function (req, _, next) {
     const type = req.headers['content-type']
     if (type !== 'pico/feed') return next()
 
     const size = parseInt(req.headers['content-length'])
 
-    const buffer = pool.alloc()
-    let released = 0
-    const release = () => !released && (reuse.free(buffer), ++released)
-    res.once('close', release)
-
+    const buffer = u8n(Math.min(65536, size))
     let offset = 0
     new Promise((resolve, reject) => {
       req.on('data', chunk => {
@@ -96,20 +90,15 @@ function CryptoPickle () {
     }).then(() => {
       // TODO: alternate constructor: new Feed(buffer, tail)
       if (size !== offset) throw new Error('Buffer underflow')
-      req.feed = new Feed()
-      req.feed.buf = buffer
-      req.feed.tail = offset
-      req.feed._reIndex(true)
+      req.feed = new Feed(buffer)
       next()
     }).catch(err => {
-      console.info('Pool free() via err', pool.free.length)
-      release()
       next(err)
     })
   }
 }
 
-function Macros (req, res, next) {
+function Macros (_, res, next) {
   res.error = (error, code = 400) => send(res, code, { error })
   res.redirect = uri => send(res, 302, '', { Location: uri })
   next()

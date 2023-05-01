@@ -1,5 +1,5 @@
 import test from 'brittle'
-import Feed from 'picofeed'
+import { Feed } from 'picofeed'
 import {
   pack,
   unpack
@@ -8,7 +8,8 @@ import WebSilo from './web-silo.js'
 import Silo from './silo.js'
 import fetch from 'node-fetch'
 import { MemoryLevel } from 'memory-level'
-
+import { webcrypto } from 'node:crypto'
+if (!globalThis.crypto) globalThis.crypto = webcrypto
 const HTML = `<!doctype html>
 <html>
 <head>
@@ -35,13 +36,13 @@ test('WebSilo push', async t => {
   const [url, close] = await listen()
   const { pk, sk } = Feed.signPair()
   const site = pack(sk, HTML)
-  const res = await fetch(url + '/' + pk.hexSlice(), {
+  const res = await fetch(url + '/' + pk, {
     method: 'POST',
     headers: { 'Content-Type': 'pico/feed' },
-    body: site.buf.slice(0, site.tail)
+    body: site.buffer
   })
   t.is(res.status, 201)
-  const visit = await fetch(url + '/' + pk.hexSlice(), {
+  const visit = await fetch(url + '/' + pk, {
     method: 'GET',
     headers: { Accept: 'text/html' }
   })
@@ -55,10 +56,10 @@ test('web-silo index', async t => {
   const [url, close] = await listen()
   const { pk, sk } = Feed.signPair()
   const site = pack(sk, HTML)
-  await fetch(url + '/' + pk.hexSlice(), {
+  await fetch(url + '/' + pk, {
     method: 'POST',
     headers: { 'Content-Type': 'pico/feed' },
-    body: site.buf.slice(0, site.tail)
+    body: site.buffer
   })
 
   const res = await fetch(url, {
@@ -66,7 +67,7 @@ test('web-silo index', async t => {
   })
   const [entry] = await res.json()
   t.ok(entry)
-  t.ok(entry.key, pk.hexSlice())
+  t.ok(entry.key, pk)
   // t.is(entry.revision, 0) // TODO: remove from spec, date is as good revision as any.
   t.ok(entry.date)
   t.is(entry.title, 'PicoWEB title')

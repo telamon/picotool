@@ -1,10 +1,11 @@
 #!/usr/bin/env node
+
 // suffix-less executables cannot have pretty imports
 (async () => {
-  const { readFileSync } = await import('node:fs')
-  const Feed = (await import('picofeed')).default
+  const { readFileSync, writeFileSync } = await import('node:fs')
+  const { Feed, b2h, toU8 } = (await import('picofeed'))
   const { Command } = await import('commander')
-  const { pack } = await import('./index.js')
+  const { pack, pickle, unpickle } = await import('./index.js')
   const Silo = (await import('./web-silo.js')).default
   const { Level } = await import('level')
   const fetch = (await import('node-fetch')).default
@@ -40,11 +41,11 @@
 
   async function runRelease (input, options) {
     let sk
-    if (sk) sk = Buffer.from(options.secret, 'hex')
+    if (sk) sk = toU8(options.secret)
     else {
       console.error('No secret provided, generated new, keep it safe: \n')
       sk = Feed.signPair().sk
-      console.error(sk.hexSlice(), '\n')
+      console.error(sk, '\n')
     }
     // TODO: move to picofeed: const privKey = secp.utils.randomPrivateKey() // Secure random private key
 
@@ -57,11 +58,11 @@
       switch (url.protocol) {
         case 'http:':
         case 'https:': {
-          const site = url.href + feed.last.key.hexSlice()
+          const site = url.href + b2h(feed.last.key)
           const res = await fetch(site, {
             method: 'POST',
             headers: { 'Content-Type': 'pico/feed' },
-            body: feed.buf.slice(0, feed.tail)
+            body: feed.buffer
           })
           if (res.status !== 201) {
             console.error('Something went wrong:', await res.text())
@@ -73,7 +74,14 @@
         default:
           console.error(url.protocol, 'not yet implemented')
       }
-    } else console.log(feed.pickle())
+    } else if (/\.pwa$/.test(out)) {
+      writeFileSync(out, feed.buffer)
+    } else {
+      const s = pickle(feed)
+      const f = unpickle(s)
+      if (f.diff(feed) !== 0) throw new Error('Assertion Failed')
+      console.log(s)
+    }
   }
 
   async function runSilo (options) {

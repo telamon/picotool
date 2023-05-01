@@ -1,4 +1,4 @@
-import Repo from 'picorepo'
+import { Repo } from 'picorepo'
 import { unpack } from './index.js'
 
 export default class Silo {
