@@ -1,5 +1,5 @@
 import { solo, test } from 'brittle'
-import { Feed, isFeed, feedFrom, b2s } from 'picofeed'
+import { Feed, isFeed, feedFrom, b2s, b2h } from 'picofeed'
 import {
   pack,
   unpack
@@ -102,12 +102,17 @@ test('Silo', async t => {
   // TODO
 })
 
-solo('POP-04: file.html => file.pwa', async t => {
+test('POP-04: file.html => file.pwa', async t => {
   const source = readFileSync('./example.html')
   const pwa = pack(source)
   // writeFileSync('./example.pwa', pwa.buffer)
   t.ok(isFeed(pwa))
   const site = unpack(pwa)
   console.log(site)
+
+  t.is(typeof site.html, 'string')
+  t.ok(site.headers)
+  t.ok(site.headers.get('date'))
+  t.is(b2h(site.key), site.headers.get('key'))
   t.is(site.body)
 })
