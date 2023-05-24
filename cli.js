@@ -5,10 +5,9 @@
   const { readFileSync, writeFileSync } = await import('node:fs')
   const { Feed, b2h, toU8 } = (await import('picofeed'))
   const { Command } = await import('commander')
-  const { pack, pickle, unpickle } = await import('./index.js')
+  const { pack, pushHttp, pickle, unpickle } = await import('./index.js')
   const Silo = (await import('./web-silo.js')).default
   const { Level } = await import('level')
-  const fetch = (await import('node-fetch')).default
 
   const program = new Command()
   program.description(bq`
@@ -50,8 +49,8 @@
     // TODO: move to picofeed: const privKey = secp.utils.randomPrivateKey() // Secure random private key
 
     let html
-    if (input !== '-') html = readFileSync(input)
-    const feed = pack(sk, html)
+    if (input !== '-') html = readFileSync(input).toString('utf8')
+    const feed = pack(html, sk)
     const out = options.output || ''
     if (/^[\w\d]+:/.test(out)) {
       const url = new URL(out)
@@ -59,11 +58,7 @@
         case 'http:':
         case 'https:': {
           const site = url.href + b2h(feed.last.key)
-          const res = await fetch(site, {
-            method: 'POST',
-            headers: { 'Content-Type': 'pico/feed' },
-            body: feed.buffer
-          })
+          const res = await pushHttp(site, feed)
           if (res.status !== 201) {
             console.error('Something went wrong:', await res.text())
           } else {

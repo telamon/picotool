@@ -153,7 +153,7 @@ export function bootParser (str, o = 0) {
 /**
  * Uploads a blocks via HTTPS POST
  * @param {string} siloUrl
- * @param {Feed|Block} site
+ * @param {Feed} site
  * @returns {Promise}
  */
 export async function pushHttp (siloUrl, site) {
