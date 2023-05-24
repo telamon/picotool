@@ -1,4 +1,4 @@
-import test from 'brittle'
+import { test, solo } from 'brittle'
 import { Feed, b2h, isFeed } from 'picofeed'
 import {
   pack,
@@ -21,13 +21,12 @@ const HTML = `<!doctype html>
 
 test('POP-04 pack/unpack', async t => {
   const { sk } = Feed.signPair() // TODO: change algo
-  const p = pack(sk, HTML)
+  const p = pack(HTML, sk)
   t.ok(Feed.isFeed(p))
   const out = unpack(p)
-  // console.log(out)
-  t.is(out.body, HTML)
-  t.ok(out.headers.date)
-  t.is(out.runlevel, 0)
+  t.is(out.html, HTML)
+  t.ok(out.headers.get('date') instanceof Date)
+  t.ok(out.date instanceof Date)
 })
 
 test('Silo', async t => {
@@ -35,7 +34,7 @@ test('Silo', async t => {
   const silo = new Silo(db)
   // put
   const { pk, sk } = Feed.signPair()
-  const stored = await silo.put(pack(sk, HTML))
+  const stored = await silo.put(pack(HTML, sk))
   t.is(stored, true)
   // get
   const feed = await silo.get(pk)
@@ -47,10 +46,10 @@ test('Silo', async t => {
 
   // update
   const html2 = HTML + '<update>lol</update>'
-  const stored2 = await silo.put(pack(sk, html2))
+  const stored2 = await silo.put(pack(html2, sk))
   t.is(stored2, true)
   const site = unpack(await silo.get(pk))
-  t.is(site.body, html2)
+  t.is(site.html, html2)
   // delete
   // TODO
 })
@@ -59,7 +58,7 @@ test('Silo track hits', async t => {
   const db = new MemoryLevel()
   const silo = new Silo(db)
   const { pk, sk } = Feed.signPair()
-  const stored = await silo.put(pack(sk, HTML))
+  const stored = await silo.put(pack(HTML, sk))
   t.is(stored, true)
 
   // fetch stats for a site
@@ -75,13 +74,12 @@ test('Silo track hits', async t => {
 })
 
 test('POP-04: file.html => file.pwa', async t => {
-  const source = readFileSync('./example.html')
-  const pwa = pack(source)
+  const source = readFileSync('./example.html') // File with embedded 'Secret'
+  const pwa = pack(source.toString('utf8'))
   // writeFileSync('./example.pwa', pwa.buffer)
   t.ok(isFeed(pwa))
   const site = unpack(pwa)
   console.log(site)
-
   t.is(typeof site.html, 'string')
   t.ok(site.headers)
   t.ok(site.headers.get('date'))

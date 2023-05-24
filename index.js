@@ -1,6 +1,30 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import { Feed, b2s, getPublicKey, cpy, s2b, usize } from 'picofeed'
+import { Feed, b2s, getPublicKey, cpy, s2b, feedFrom } from 'picofeed'
 import { b64e, b64d, byteLength } from './b64.js'
+
+/**
+@typedef {{
+  format: string,
+  key: PublicBin,
+  date: Date,
+  headers: Headers,
+  html: string
+}} Site
+*/
+
+/**
+ * Checks if input is a 32byte buffer or 64char-hexstring
+ * @type {(key: import('picofeed').PublicKey) => key is import('picofeed').PublicKey}
+ */
+export function isPublicKey (key) {
+  return (
+    (key instanceof ArrayBuffer || ArrayBuffer.isView(key)) &&
+      (key?.buffer || key).length === 32
+  ) ||
+  (typeof key === 'string' && /^[a-fA-F0-9]{64}$/.test(key))
+}
+
+export function isSecretKey (key) { return isPublicKey(key) } // Silly; not sure what to do.
 
 /**
  * Signs a Pico Web Application according to spec POP-04
@@ -15,6 +39,7 @@ import { b64e, b64d, byteLength } from './b64.js'
  * @returns {Feed}
  */
 export function pack (html, secret, headers = {}, runlvl = 0, feed = new Feed()) {
+  if (typeof html !== 'string') throw new Error('Expected `html` to be string')
   let format = `html${runlvl}`
   const rawHeaders = new globalThis.Headers()
   let offset = 0
@@ -30,6 +55,9 @@ export function pack (html, secret, headers = {}, runlvl = 0, feed = new Feed())
   } catch (err) {
     if (err.message !== 'UnsupportedFormat') throw err
   }
+
+  if (!isSecretKey(secret)) throw new Error('Expected secret to be a hexstring or buffer')
+
   for (const key in headers) rawHeaders.append(key, headers[key])
   rawHeaders.set('key', getPublicKey(secret))
   rawHeaders.set('date', Date.now())
@@ -39,14 +67,14 @@ export function pack (html, secret, headers = {}, runlvl = 0, feed = new Feed())
     else hdata += `${key}: ${value}\n`
   }
   hdata += '\n'
-  const buffer = new Uint8Array(hdata.length + html.length - offset)
+  const bhtml = s2b(html.slice(offset))
+  const buffer = new Uint8Array(hdata.length + bhtml.length - offset)
   cpy(buffer, s2b(hdata))
-  cpy(buffer, html.slice(offset), hdata.length)
+  cpy(buffer, bhtml, hdata.length)
   feed.append(buffer, secret)
   return feed
 }
 
-/** @typedef {format: string, key: PublicBin, date: Date, headers: Headers, html: string} Site */
 /**
  * Parses headers and decodes html to string.
  * @param {Block|Feed} pico-block
@@ -60,7 +88,7 @@ export function unpack (block) {
     key: block.key,
     date: headers.get('date'),
     headers,
-    html: b2s(block.body.slice(end))
+    html: b2s(block.body.subarray(end))
   }
 }
 
@@ -77,7 +105,7 @@ export function unpickle (str) {
 
 if (!globalThis.Headers) {
   globalThis.Headers = class Headers extends Map {
-    /** @type {(string, string) => void} */
+    /** @type {(key: string, value: string) => void} */
     append (key, value) {
       key = key.toLowerCase()
       if (this.has(key)) this.set(key, this.get(key) + ', ' + value)
@@ -91,6 +119,7 @@ if (!globalThis.Headers) {
  * according to spec
  * @param {string|Uint8Array} str Input html/source
  * @param {number} o Input offset
+ * @returns {{ docType: 'string', headers: Headers, end: number}} parser info
  */
 export function bootParser (str, o = 0) {
   if (typeof str !== 'string') str = b2s(str)
@@ -121,15 +150,26 @@ export function bootParser (str, o = 0) {
   return { docType, headers, end: o }
 }
 
+/**
+ * Uploads a blocks via HTTPS POST
+ * @param {string} siloUrl
+ * @param {Feed|Block} site
+ * @returns {Promise}
+ */
 export async function pushHttp (siloUrl, site) {
-  site = PicoFeed.from(site)
+  site = feedFrom(site)
   return globalThis.fetch(siloUrl, {
     method: 'POST',
     headers: { 'Content-Type': 'pico/feed' },
-    body: site.buf.slice(0, site.tail)
+    body: site.buffer
   })
 }
 
+/**
+ * Downloads blocks via HTTP GET
+ * @param {string} siloUrl An endpoint that supports Content-Type: pico/feed
+ * @returns {Promise<Feed>} downloaded blocks
+ */
 export async function fetchHttp (siloUrl) {
   const res = await globalThis.fetch(siloUrl, {
     method: 'GET',
@@ -141,9 +181,6 @@ export async function fetchHttp (siloUrl) {
   if (ctype !== 'pico/feed') throw new Error('Expected pico/feed, received ' + ctype)
   // TODO: For PicoFeed 4.x redesign API so that this should never happen.
   // also most likely just write the whole thing in wasm/zig. Cause this is not nice.
-  const feed = new Feed()
-  feed.buf = Buffer.from(await res.arrayBuffer())
-  feed.tail = feed.buf.length
-  feed._reIndex(true)
-  return feed
+  const ab = await res.arrayBuffer()
+  return new Feed(new Uint8Array(ab))
 }
