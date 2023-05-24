@@ -1,5 +1,5 @@
 import { Repo } from 'picorepo'
-import { b2h, b2s, toU8, au8 } from 'picofeed'
+import { b2h, toU8, au8 } from 'picofeed'
 import { unpack } from './index.js'
 const TIME_THRESHOLD = 5 * 1000 // Workaround
 

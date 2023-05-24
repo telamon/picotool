@@ -1,4 +1,4 @@
-import { test, solo } from 'brittle'
+import { test } from 'brittle'
 import { Feed, b2h, isFeed } from 'picofeed'
 import {
   pack,

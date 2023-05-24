@@ -1,4 +1,4 @@
-import { test, solo } from 'brittle'
+import { test } from 'brittle'
 import { Feed } from 'picofeed'
 import { pack, unpack, pushHttp, fetchHttp } from '../index.js'
 import WebSilo from '../web-silo.js'

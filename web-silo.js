@@ -8,7 +8,7 @@
  * into a pure silo that runs in frontend.
  */
 import polka from 'polka'
-import { Feed, cmp, u8n, h2b } from 'picofeed'
+import { Feed, cmp, u8n } from 'picofeed'
 import send from '@polka/send-type'
 import { unpack } from './index.js'
 import Silo, { toPublicBin } from './silo.js'
