@@ -11,7 +11,7 @@ import polka from 'polka'
 import { Feed, cmp, u8n, h2b } from 'picofeed'
 import send from '@polka/send-type'
 import { unpack } from './index.js'
-import Silo from './silo.js'
+import Silo, { toPublicBin } from './silo.js'
 
 export default function WebSilo (db, opts = {}) {
   opts = {
@@ -29,8 +29,7 @@ export default function WebSilo (db, opts = {}) {
   // Publish site endpoint
   api.post('/:key', async (req, res) => {
     const feed = req.feed
-    const key = h2b(req.params.key)
-    debugger
+    const key = toPublicBin(req.params.key)
     if (!cmp(feed.last.key, key)) return res.error('Verification failed', 401)
     try {
       await silo.put(feed)
@@ -42,7 +41,7 @@ export default function WebSilo (db, opts = {}) {
   })
 
   api.get('/stat/:key', async (req, res) => {
-    const key = Buffer.from(req.params.key, 'hex')
+    const key = toPublicBin(req.params.key)
     const stat = await silo.stat(key)
     if (!stat) send(res, 404)
     else send(res, 200, stat)
@@ -56,20 +55,18 @@ export default function WebSilo (db, opts = {}) {
 
   // Fetch site Endpoint
   api.get('/:key', async (req, res) => {
-    const key = h2b(req.params.key)
+    const key = toPublicBin(req.params.key)
     const feed = await silo.get(key)
     if (!feed) return res.error('Site not Found', 404)
     switch (req.headers.accept) {
       case 'pico/feed':
-        debugger
         send(res, 200, Buffer.from(feed.buffer), { 'Content-Type': 'pico/feed' })
         break
-
       case 'text/html':
       default: {
         // Server side bootloading, very boring;
         const site = unpack(feed)
-        send(res, 200, site.body, {
+        send(res, 200, site.html, {
           ...site.headers,
           'Content-Type': 'text/html'
         })

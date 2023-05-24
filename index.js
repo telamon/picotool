@@ -3,6 +3,16 @@ import { Feed, b2s, getPublicKey, cpy, s2b, feedFrom } from 'picofeed'
 import { b64e, b64d, byteLength } from './b64.js'
 
 /**
+@typedef {{
+  format: string,
+  key: PublicBin,
+  date: Date,
+  headers: Headers,
+  html: string
+}} Site
+*/
+
+/**
  * Checks if input is a 32byte buffer or 64char-hexstring
  * @type {(key: import('picofeed').PublicKey) => key is import('picofeed').PublicKey}
  */
@@ -30,8 +40,6 @@ export function isSecretKey (key) { return isPublicKey(key) } // Silly; not sure
  */
 export function pack (html, secret, headers = {}, runlvl = 0, feed = new Feed()) {
   if (typeof html !== 'string') throw new Error('Expected `html` to be string')
-  if (!isSecretKey(secret)) throw new Error('Expected secret to be a zb32-string or buffer')
-
   let format = `html${runlvl}`
   const rawHeaders = new globalThis.Headers()
   let offset = 0
@@ -47,6 +55,8 @@ export function pack (html, secret, headers = {}, runlvl = 0, feed = new Feed())
   } catch (err) {
     if (err.message !== 'UnsupportedFormat') throw err
   }
+
+  if (!isSecretKey(secret)) throw new Error('Expected secret to be a hexstring or buffer')
 
   for (const key in headers) rawHeaders.append(key, headers[key])
   rawHeaders.set('key', getPublicKey(secret))
@@ -65,7 +75,6 @@ export function pack (html, secret, headers = {}, runlvl = 0, feed = new Feed())
   return feed
 }
 
-/** @typedef {format: string, key: PublicBin, date: Date, headers: Headers, html: string} Site */
 /**
  * Parses headers and decodes html to string.
  * @param {Block|Feed} pico-block
@@ -110,6 +119,7 @@ if (!globalThis.Headers) {
  * according to spec
  * @param {string|Uint8Array} str Input html/source
  * @param {number} o Input offset
+ * @returns {{ docType: 'string', headers: Headers, end: number}} parser info
  */
 export function bootParser (str, o = 0) {
   if (typeof str !== 'string') str = b2s(str)
@@ -144,6 +154,7 @@ export function bootParser (str, o = 0) {
  * Uploads a blocks via HTTPS POST
  * @param {string} siloUrl
  * @param {Feed|Block} site
+ * @returns {Promise}
  */
 export async function pushHttp (siloUrl, site) {
   site = feedFrom(site)
@@ -157,7 +168,7 @@ export async function pushHttp (siloUrl, site) {
 /**
  * Downloads blocks via HTTP GET
  * @param {string} siloUrl An endpoint that supports Content-Type: pico/feed
- * @returns {Feed} downloaded blocks
+ * @returns {Promise<Feed>} downloaded blocks
  */
 export async function fetchHttp (siloUrl) {
   const res = await globalThis.fetch(siloUrl, {

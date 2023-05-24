@@ -63,7 +63,6 @@ test('Silo track hits', async t => {
 
   // fetch stats for a site
   let stat = await silo.stat(pk)
-  debugger
   t.is(stat.hits, 0)
 
   // get
@@ -75,13 +74,12 @@ test('Silo track hits', async t => {
 })
 
 test('POP-04: file.html => file.pwa', async t => {
-  const source = readFileSync('./example.html')
-  const pwa = pack(source)
+  const source = readFileSync('./example.html') // File with embedded 'Secret'
+  const pwa = pack(source.toString('utf8'))
   // writeFileSync('./example.pwa', pwa.buffer)
   t.ok(isFeed(pwa))
   const site = unpack(pwa)
   console.log(site)
-
   t.is(typeof site.html, 'string')
   t.ok(site.headers)
   t.ok(site.headers.get('date'))

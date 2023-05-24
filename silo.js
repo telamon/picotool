@@ -1,7 +1,22 @@
 import { Repo } from 'picorepo'
-import { b2h, b2s, toU8 } from 'picofeed'
+import { b2h, b2s, toU8, au8 } from 'picofeed'
 import { unpack } from './index.js'
 const TIME_THRESHOLD = 5 * 1000 // Workaround
+
+/**
+ * @typedef {{}} SiteMetaData
+ */
+
+/**
+ * Guard & normalize hex-strings -> [32]Uint8Array
+ * @param {string|Uint8Array} k
+ * @returns {PublicBin}
+ */
+export function toPublicBin (k) {
+  if (typeof k === 'string' && k.length === 64) return toU8(k)
+  return au8(k, 32)
+}
+
 /**
  * A naive peristent storage of websites
  */
@@ -23,6 +38,11 @@ export default class Silo {
     this.hits = db.sublevel('hits', { keyEncoding: 'buffer', valueEncoding: 'json' })
   }
 
+  /**
+   * Store site
+   * @param {Feed} feed
+   * @returns {Promise<boolean>} true when accepted
+   */
   async put (feed) {
     const block = feed.last
     const site = unpack(block)
@@ -47,8 +67,7 @@ export default class Silo {
     if (!nMerged) return false
 
     // store metadata
-    const b = b2s(site.body)
-    const matchTitle = b.match(/<title>([^<]+)<\/title>/)
+    const matchTitle = site.html.match(/<title>([^<]+)<\/title>/)
     await this.idxMeta.put(key, {
       date: site.date,
       title: matchTitle ? matchTitle[1] : '',
@@ -59,30 +78,43 @@ export default class Silo {
     return true
   }
 
+  /**
+   * Get metadata about site
+   * @param {PublicKey} key Site key
+   * @returns Promise<SiteMetaData>
+   */
   async stat (key) {
-    debugger
-    key = toU8(key)
+    key = toPublicBin(key)
     const meta = await this.idxMeta.get(key).catch(ignore404)
     if (!meta) return
     const hits = (await this.hits.get(key).catch(ignore404)) || 0
     return { ...meta, hits }
   }
 
+  /**
+   * Fetch a site by key
+   * @param {PublicKey} key
+   * @returns {Promise<Feed>} Site as a feed
+   */
   async get (key) {
+    key = toPublicBin(key)
     const counter = await this.hits.get(key).catch(ignore404)
     await this.hits.put(key, (counter || 0) + 1)
     return this.repo.loadHead(key)
   }
 
+  /**
+   * List
+   */
   async list (filter = {}) {
     const heads = await this.repo.listHeads()
     const out = []
     for (const head of heads) {
       const stat = await this.stat(head.key)
       out.push({
-        key: head.key.hexSlice(),
+        key: b2h(head.key),
         ...stat,
-        signature: head.value.hexSlice()
+        signature: b2h(head.value)
       })
     }
     return out

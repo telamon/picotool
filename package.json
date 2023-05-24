@@ -17,7 +17,7 @@
     "lint": "standard --fix",
     "test": "brittle test/*.js",
     "cov": "c8 npm test",
-    "debug": "node inspect $(npm bin)/brittle test/*.js",
+    "debug": "node inspect ./node_modules/.bin/brittle test/*.js",
     "prepublishOnly": "standard && npm test && node build.js"
   },
   "repository": {
