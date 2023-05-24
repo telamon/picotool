@@ -1,6 +1,6 @@
 {
   "name": "picotool",
-  "version": "0.1.7",
+  "version": "0.2.0",
   "description": "Pico web app assembler and tooling",
   "type": "module",
   "main": "index.js",
