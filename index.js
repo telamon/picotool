@@ -61,6 +61,7 @@ export async function fetchHttp (siloUrl) {
     method: 'GET',
     headers: { accept: 'pico/feed' }
   })
+  if (res.status === 404) throw new Error('NotFound')
   if (res.status !== 200) return res
   const ctype = res.headers.get('Content-Type')
   if (ctype !== 'pico/feed') throw new Error('Expected pico/feed, received ' + ctype)

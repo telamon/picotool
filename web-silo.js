@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-/*
+/**
  * Foreword, this is an prototype implementation
  * of a serverside "http" silo, the intention is
  * to create a functional sketch and refine
