@@ -1,11 +1,12 @@
 import test from 'brittle'
-import Feed from 'picofeed'
+import { Feed, b2h, isFeed } from 'picofeed'
 import {
   pack,
   unpack
 } from '../index.js'
 import Silo from '../silo.js'
 import { MemoryLevel } from 'memory-level'
+import { readFileSync } from 'node:fs'
 
 const HTML = `<!doctype html>
 <html>
@@ -71,4 +72,19 @@ test('Silo track hits', async t => {
 
   stat = await silo.stat(pk)
   t.is(stat.hits, 1)
+})
+
+test('POP-04: file.html => file.pwa', async t => {
+  const source = readFileSync('./example.html')
+  const pwa = pack(source)
+  // writeFileSync('./example.pwa', pwa.buffer)
+  t.ok(isFeed(pwa))
+  const site = unpack(pwa)
+  console.log(site)
+
+  t.is(typeof site.html, 'string')
+  t.ok(site.headers)
+  t.ok(site.headers.get('date'))
+  t.is(b2h(site.key), site.headers.get('key'))
+  t.is(site.body)
 })

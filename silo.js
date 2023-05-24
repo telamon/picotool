@@ -1,5 +1,5 @@
-import Repo from 'picorepo'
-// import { inspect } from 'picorepo/dot.js'
+import { Repo } from 'picorepo'
+import { b2h } from 'picofeed'
 import { unpack } from './index.js'
 const TIME_THRESHOLD = 5 * 1000 // Workaround
 /**
@@ -40,7 +40,7 @@ export default class Silo {
     // Purge previous version
     const evicted = await this.repo.rollback(key)
     if (evicted) {
-      console.log('New version', key.hexSlice(0, 6), evicted.last.sig.hexSlice(0, 6), ' => ', block.sig.hexSlice(0, 6))
+      console.log('New version', b2h(key.slice(0, 3)), b2h(evicted.last.sig.slice(0, 3)), ' => ', b2h(block.sig.slice(0, 3)))
     }
 
     // store new version

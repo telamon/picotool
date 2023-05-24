@@ -6,8 +6,7 @@
  * into a pure silo that runs in frontend.
  */
 import polka from 'polka'
-// import reuse from 'buffer-reuse-pool' // This caused global spooky action
-import Feed from 'picofeed'
+import { Feed, cmp, u8n, h2b } from 'picofeed'
 import send from '@polka/send-type'
 import { unpack } from './index.js'
 import Silo from './silo.js'
@@ -29,11 +28,10 @@ export default function WebSilo (db, opts = {}) {
   api.post('/:key', async (req, res) => {
     const feed = req.feed
     const key = Buffer.from(req.params.key, 'hex')
-    if (!feed.last.key.equals(key)) return res.error('Verification failed', 401)
+    if (!cmp(feed.last.key, key)) return res.error('Verification failed', 401)
     try {
-      const stored = await silo.put(feed)
-      if (stored) send(res, 201, { done: true })
-      else send(res, 304, { error: 'not-modified' })
+      await silo.put(feed)
+      send(res, 201, { done: true })
     } catch (err) {
       console.error('Failed unpack()', err)
       return res.error(err.message, 400)
@@ -55,12 +53,12 @@ export default function WebSilo (db, opts = {}) {
 
   // Fetch site Endpoint
   api.get('/:key', async (req, res) => {
-    const key = Buffer.from(req.params.key, 'hex')
+    const key = h2b(req.params.key)
     const feed = await silo.get(key)
     if (!feed) return res.error('Site not Found', 404)
     switch (req.headers.accept) {
       case 'pico/feed':
-        send(res, 200, feed.buf.slice(0, feed.tail), { 'Content-Type': 'pico/feed' })
+        send(res, 200, feed.buffer, { 'Content-Type': 'pico/feed' })
         break
 
       case 'text/html':
@@ -83,20 +81,19 @@ export default function WebSilo (db, opts = {}) {
 }
 
 // Log every request
-function logger (req, res, next) {
+function logger (req, _, next) {
   console.log(`${req.method} ${req.url}`)
   next()
 }
 
 // Picofeed Middleware
 function CryptoPickle () {
-  return function (req, res, next) {
+  return function (req, _, next) {
     const type = req.headers['content-type']
     if (type !== 'pico/feed' || !~['POST', 'PUT'].indexOf(req.method)) return next()
     const size = parseInt(req.headers['content-length'])
 
-    const buffer = Buffer.alloc(Math.min(size, Feed.MAX_FEED_SIZE)) // pool.alloc()
-    buffer.fill(0)
+    const buffer = u8n(Math.min(65536, size))
     let offset = 0
 
     new Promise((resolve, reject) => {
@@ -111,10 +108,7 @@ function CryptoPickle () {
     }).then(() => {
       // TODO: alternate constructor: new Feed(buffer, tail)
       if (size !== offset) throw new Error('Buffer underflow')
-      req.feed = new Feed()
-      req.feed.buf = buffer
-      req.feed.tail = offset
-      req.feed._reIndex(true)
+      req.feed = new Feed(buffer)
       next()
     }).catch(err => {
       next(err)
@@ -122,7 +116,7 @@ function CryptoPickle () {
   }
 }
 
-function Macros (req, res, next) {
+function Macros (_, res, next) {
   res.error = (error, code = 400) => send(res, code, { error })
   res.redirect = uri => send(res, 302, '', { Location: uri })
   next()
