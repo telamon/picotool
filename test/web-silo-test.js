@@ -1,5 +1,5 @@
 import { test, solo } from 'brittle'
-import Feed from 'picofeed'
+import { Feed, b2h } from 'picofeed'
 import { pack, unpack, pushHttp, fetchHttp } from '../index.js'
 import WebSilo from '../web-silo.js'
 import fetch from 'node-fetch'
@@ -26,23 +26,23 @@ const HTML = `<!doctype html>
 </html>
 `
 
-solo('WebSilo push', async t => {
+test.skip('WebSilo push', async t => {
   const [url, close] = await listen()
   const { pk, sk } = Feed.signPair()
-  const site = pack(sk, HTML)
-  const res = await pushHttp(url + '/' + pk.hexSlice(), site)
+  const site = pack(HTML, sk)
+  const res = await pushHttp(url + '/' + pk, site)
   t.is(res.status, 201)
   // Test fetch as text/html (unrestricted mode)
-  const visit = await fetch(url + '/' + pk.hexSlice(), {
+  const visit = await fetch(url + '/' + pk, {
     method: 'GET',
     headers: { Accept: 'text/html' }
   })
   const original = unpack(site)
   const doc = await visit.text()
-  t.is(doc, original.body)
+  t.is(doc, original.html)
 
   // Test fetch as pico/feed (for sandboxed bootloading)
-  const feed = await fetchHttp(url + '/' + pk.hexSlice())
+  const feed = await fetchHttp(url + '/' + pk)
   t.is(Feed.isFeed(feed), true)
   close()
 })

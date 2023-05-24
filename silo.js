@@ -1,5 +1,5 @@
 import { Repo } from 'picorepo'
-import { b2h } from 'picofeed'
+import { b2h, b2s, toU8 } from 'picofeed'
 import { unpack } from './index.js'
 const TIME_THRESHOLD = 5 * 1000 // Workaround
 /**
@@ -27,8 +27,7 @@ export default class Silo {
     const block = feed.last
     const site = unpack(block)
     const { key } = site
-
-    if (site.runlevel !== 0) throw new Error('Unsupported Runlevel')
+    if (site.format !== 'html0') throw new Error('Unsupported Runlevel')
     if (new Date(site.headers.date).getTime() - TIME_THRESHOLD > Date.now()) throw new Error('Site from future')
 
     // TODO: validate contents.
@@ -48,7 +47,8 @@ export default class Silo {
     if (!nMerged) return false
 
     // store metadata
-    const matchTitle = site.body.match(/<title>([^<]+)<\/title>/)
+    const b = b2s(site.body)
+    const matchTitle = b.match(/<title>([^<]+)<\/title>/)
     await this.idxMeta.put(key, {
       date: site.date,
       title: matchTitle ? matchTitle[1] : '',
@@ -60,6 +60,8 @@ export default class Silo {
   }
 
   async stat (key) {
+    debugger
+    key = toU8(key)
     const meta = await this.idxMeta.get(key).catch(ignore404)
     if (!meta) return
     const hits = (await this.hits.get(key).catch(ignore404)) || 0

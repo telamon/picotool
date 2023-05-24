@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 /*
+ * HEADS UP; This File uses node:Buffer, not TypedArrays.
+ *
  * Foreword, this is an prototype implementation
  * of a serverside "http" silo, the intention is
  * to create a functional sketch and refine
@@ -27,7 +29,8 @@ export default function WebSilo (db, opts = {}) {
   // Publish site endpoint
   api.post('/:key', async (req, res) => {
     const feed = req.feed
-    const key = Buffer.from(req.params.key, 'hex')
+    const key = h2b(req.params.key)
+    debugger
     if (!cmp(feed.last.key, key)) return res.error('Verification failed', 401)
     try {
       await silo.put(feed)
@@ -58,7 +61,8 @@ export default function WebSilo (db, opts = {}) {
     if (!feed) return res.error('Site not Found', 404)
     switch (req.headers.accept) {
       case 'pico/feed':
-        send(res, 200, feed.buffer, { 'Content-Type': 'pico/feed' })
+        debugger
+        send(res, 200, Buffer.from(feed.buffer), { 'Content-Type': 'pico/feed' })
         break
 
       case 'text/html':
@@ -73,7 +77,7 @@ export default function WebSilo (db, opts = {}) {
     }
   })
 
-  api.get('/', async (req, res) => {
+  api.get('/', async (_, res) => {
     const out = await silo.list()
     send(res, 200, out)
   })
@@ -106,7 +110,6 @@ function CryptoPickle () {
       req.once('error', reject)
       req.once('end', resolve)
     }).then(() => {
-      // TODO: alternate constructor: new Feed(buffer, tail)
       if (size !== offset) throw new Error('Buffer underflow')
       req.feed = new Feed(buffer)
       next()
