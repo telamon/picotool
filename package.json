@@ -18,7 +18,7 @@
     "test": "brittle test/*.js",
     "cov": "c8 npm test",
     "debug": "node inspect ./node_modules/.bin/brittle test/*.js",
-    "prepublishOnly": "standard && npm test && node build.js"
+    "prepublishOnly": "standard && npm test"
   },
   "repository": {
     "type": "git",
