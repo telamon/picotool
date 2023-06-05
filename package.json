@@ -11,7 +11,8 @@
     "index.js",
     "silo.js",
     "web-silo.js",
-    "cli.js"
+    "cli.js",
+    "b64.js"
   ],
   "scripts": {
     "lint": "standard --fix",
