@@ -11,7 +11,7 @@
     "index.js",
     "silo.js",
     "web-silo.js",
-    "index.esm.js"
+    "cli.js"
   ],
   "scripts": {
     "lint": "standard --fix",
